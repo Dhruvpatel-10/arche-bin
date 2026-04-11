@@ -11,25 +11,33 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const FIELD_LABEL_W: u16 = 10; // "▸ pass    " = indicator(2) + label(8)
 const UNDERLINE_W: u16 = 24;
 
+/// Standard terminal dimensions — if the framebuffer reports more (e.g. multi-monitor
+/// VT spanning two displays), we clamp to this so the content stays on one screen.
+const MAX_W: u16 = 220;
+const MAX_H: u16 = 65;
+
 pub fn draw(f: &mut ratatui::Frame, app: &App) {
-    let area = f.area();
-    let w = area.width;
-    let h = area.height;
+    let full = f.area();
 
-    // Full dark canvas
-    f.render_widget(Block::default().style(Style::default().bg(BG)), area);
+    // Full dark canvas across the entire framebuffer
+    f.render_widget(Block::default().style(Style::default().bg(BG)), full);
 
+    // Clamp working area so layout stays centered on one display
+    let w = full.width.min(MAX_W);
+    let h = full.height.min(MAX_H);
+    let ox = (full.width.saturating_sub(w)) / 2;
+    let oy = (full.height.saturating_sub(h)) / 2;
     // -- Top zone: hostname left, time right ----------------------------------
     if h > 4 {
-        let top = Rect::new(0, 0, w, 1);
+        let top = Rect::new(ox, oy, w, 1);
         draw_top_bar(f, top, app);
     }
 
     // -- Title: upper quarter -------------------------------------------------
-    let title_y = (h / 4).max(2).min(h.saturating_sub(6));
+    let title_y = oy + (h / 4).max(2).min(h.saturating_sub(6));
     render_at(
         f,
-        Rect::new(0, title_y, w, 1),
+        Rect::new(ox, title_y, w, 1),
         Paragraph::new("a r c h e")
             .style(Style::default().fg(ACCENT).bold())
             .alignment(Alignment::Center),
@@ -37,25 +45,27 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
 
     // -- Form zone: centered vertically, content centered horizontally --------
     let content_w: u16 = 44;
-    let cx = (w.saturating_sub(content_w)) / 2; // content left edge
-    let form_y = ((h * 5) / 11).max(title_y + 2); // ~45% down, below title
+    let cx = ox + (w.saturating_sub(content_w)) / 2; // content left edge
+    let form_y = oy + ((h * 5) / 11).max((h / 4).max(2).min(h.saturating_sub(6)) + 2); // ~45% down, below title
     let value_x = cx + FIELD_LABEL_W;
 
+    let bottom_y = oy + h.saturating_sub(1); // absolute y of bottom row
+
     // user field
-    if form_y < h {
+    if form_y < bottom_y {
         draw_field_line(f, cx, form_y, w, "user", &app.username, app.focused == Field::Username);
         draw_underline(f, value_x, form_y + 1, app.focused == Field::Username);
     }
 
     // pass field
     let pass_y = form_y + 3;
-    if pass_y < h {
+    if pass_y < bottom_y {
         draw_field_line(f, cx, pass_y, w, "pass", &app.masked_password(), app.focused == Field::Password);
         draw_underline(f, value_x, pass_y + 1, app.focused == Field::Password);
 
-        // Caps lock: right edge
+        // Caps lock: right edge of working area
         if app.show_caps_warning() {
-            let caps_x = w.saturating_sub(10);
+            let caps_x = (ox + w).saturating_sub(10);
             render_at(
                 f,
                 Rect::new(caps_x, pass_y, 8, 1),
@@ -67,7 +77,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     // session field — only shown when multiple sessions available
     let session_y = pass_y + 3;
     let has_multiple_sessions = app.sessions.len() > 1;
-    if has_multiple_sessions && session_y < h {
+    if has_multiple_sessions && session_y < bottom_y {
         let name = &app.current_session().name;
         let session_line = Line::from(vec![
             Span::styled("  ", Style::default()),
@@ -76,7 +86,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         ]);
         render_at(f, Rect::new(cx, session_y, content_w, 1), Paragraph::new(session_line));
 
-        let arrows_x = w.saturating_sub(5);
+        let arrows_x = (ox + w).saturating_sub(5);
         render_at(
             f,
             Rect::new(arrows_x, session_y, 3, 1),
@@ -86,7 +96,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
 
     // -- Status: below form ---------------------------------------------------
     let status_y = if has_multiple_sessions { session_y + 2 } else { pass_y + 4 };
-    if app.status.is_visible() && status_y < h {
+    if app.status.is_visible() && status_y < bottom_y {
         let icon = app.status.icon();
         let msg = app.status.message();
         let color = app.status.color();
@@ -97,7 +107,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         };
         render_at(
             f,
-            Rect::new(0, status_y, w, 1),
+            Rect::new(ox, status_y, w, 1),
             Paragraph::new(text)
                 .style(Style::default().fg(color))
                 .alignment(Alignment::Center),
@@ -106,7 +116,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
 
     // -- Bottom zone: version left, hints right -------------------------------
     if h > 2 {
-        let bottom = Rect::new(0, h - 1, w, 1);
+        let bottom = Rect::new(ox, bottom_y, w, 1);
         draw_bottom_bar(f, bottom, app);
     }
 }
