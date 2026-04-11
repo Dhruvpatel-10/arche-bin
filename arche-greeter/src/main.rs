@@ -60,7 +60,12 @@ fn main() -> Result<(), GreeterError> {
         }
     }
 
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, cursor::Show)?;
-    terminal::disable_raw_mode()?;
+    // Only restore the terminal if the session didn't start.
+    // On successful login, greetd replaces this process — cleaning up
+    // would briefly flash the raw VT before the compositor takes over.
+    if app.status != Status::SessionStarted {
+        execute!(terminal.backend_mut(), LeaveAlternateScreen, cursor::Show)?;
+        terminal::disable_raw_mode()?;
+    }
     Ok(())
 }
