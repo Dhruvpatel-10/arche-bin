@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["arche-greeter", "arche-legion"]
+members = ["arche-legion"]
 
 [workspace.package]
 version = "0.1.0"

@@ -2,19 +2,9 @@
 
 Custom TUI system binaries for [arche](https://github.com/Dhruvpatel-10/arche) — an Arch Linux dotfiles and system configuration framework.
 
-Both tools use the **Ember** color scheme, [ratatui](https://github.com/ratatui/ratatui) for rendering, and are optimized for minimal binary size (strip + LTO + `opt-level z`).
+Uses the **Ember** color scheme, [ratatui](https://github.com/ratatui/ratatui) for rendering, and is optimized for minimal binary size (strip + LTO + `opt-level z`).
 
 ## Tools
-
-### arche-greeter
-
-TUI display manager for [greetd](https://sr.ht/~kennylevinsen/greetd/). Replaces `tuigreet`.
-
-- Speaks greetd IPC directly via `greetd_ipc` crate
-- Auto-detects Wayland/X11 sessions from `.desktop` files
-- Remembers last user and session across reboots
-- Caps lock warning, real-time clock, F2 shutdown
-- ~670KB stripped binary
 
 ### arche-legion
 
@@ -36,13 +26,12 @@ just test          # run all tests
 just deploy        # build + copy to ~/arche/tools/bin/
 ```
 
-Per-tool targets: `just build-greeter`, `just deploy-legion`, etc.
+Per-tool targets: `just build-legion`, `just deploy-legion`.
 
 ## Deployment
 
 Built binaries are copied into `~/arche/tools/bin/`. The arche bootstrap process symlinks them to their final locations:
 
-- `arche-greeter` → `/usr/local/bin/arche-greeter` (system-wide, for greetd)
 - `arche-legion` → `~/.local/bin/arche/arche-legion` (user-local, Super+Ctrl+G)
 
 ## Project Structure
@@ -51,16 +40,6 @@ Built binaries are copied into `~/arche/tools/bin/`. The arche bootstrap process
 arche-bin/
 ├── Cargo.toml          # workspace root
 ├── Justfile            # build + deploy targets
-├── arche-greeter/
-│   ├── Cargo.toml
-│   └── src/
-│       ├── main.rs     # event loop
-│       ├── app.rs      # state + logic
-│       ├── ui.rs       # ratatui rendering
-│       ├── ipc.rs      # greetd protocol
-│       ├── session.rs  # .desktop file detection
-│       ├── theme.rs    # ember color constants
-│       └── error.rs    # error types
 └── arche-legion/
     ├── Cargo.toml
     └── src/

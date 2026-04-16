@@ -4,11 +4,7 @@
 arche := env("HOME") + "/arche"
 
 # Build all binaries (release)
-build: build-greeter build-legion
-
-# Build arche-greeter
-build-greeter:
-    cargo build --release -p arche-greeter
+build: build-legion
 
 # Build arche-legion
 build-legion:
@@ -21,15 +17,8 @@ test:
 # Build and deploy all binaries to arche/tools/bin/
 deploy: build
     mkdir -p {{arche}}/tools/bin
-    cp target/release/arche-greeter {{arche}}/tools/bin/
     cp target/release/arche-legion {{arche}}/tools/bin/
     @echo "Deployed to {{arche}}/tools/bin/"
-
-# Deploy greeter only
-deploy-greeter: build-greeter
-    mkdir -p {{arche}}/tools/bin
-    cp target/release/arche-greeter {{arche}}/tools/bin/
-    @echo "Deployed arche-greeter"
 
 # Deploy legion only
 deploy-legion: build-legion
